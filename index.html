@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math</title>
+<style>
+    :root {
+        --background-color: #f0f0f0;
+        --card-background: #ffffff;
+        --box-shadow-color: rgba(0, 0, 0, 0.1);
+        --neutral-background: #e9ecef;
+        --primary-color: #007bff;
+        --primary-hover-color: #0056b3;
+        --success-background: #28a745;
+        --success-text-color: #155724;
+        --error-background: #f8d7da;
+        --error-text-color: #721c24;
+        --help-text-color: #666666;
+        --stats-background: #f8f9fa;
+    }
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: var(--background-color);
+        display: flex;
+        justify-content: center;
+    }
+    .game-container {
+        background-color: var(--card-background);
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px var(--box-shadow-color);
+        display: flex;
+        max-width: 800px;
+        width: 100%;
+        gap: 20px;
+    }
+    .game-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .numbers-container {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    .number-box {
+        width: 50px;
+        height: 50px;
+        background-color: var(--neutral-background);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        font-weight: bold;
+    }
+    .input-container {
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+    }
+    input[type="text"] {
+        padding: 8px;
+        font-size: 16px;
+        width: 300px;
+        margin-right: 10px;
+        flex-grow: 1;
+    }
+    button {
+        padding: 8px 16px;
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    button:hover {
+        background-color: var(--primary-hover-color);
+    }
+    .progress-grid {
+        display: grid;
+        grid-template-columns: repeat(10, 1fr);
+        grid-template-rows: repeat(10, 1fr);
+        gap: 8px;
+        width: 380px;
+    }
+    .number-cell {
+        aspect-ratio: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: var(--neutral-background);
+        border-radius: 4px;
+        font-size: 14px;
+    }
+    .solved {
+        background-color: var(--success-background);
+        color: white;
+    }
+    .message {
+        margin: 10px 0;
+        padding: 10px;
+        border-radius: 4px;
+    }
+    .error {
+        background-color: var(--error-background);
+        color: var(--error-text-color);
+    }
+    .success {
+        background-color: var(--success-background);
+        color: var(--success-text-color);
+    }
+    #help-text {
+        font-size: 14px;
+        color: var(--help-text-color);
+        margin-bottom: 10px;
+    }
+    .stats {
+        margin-top: 20px;
+        padding: 10px;
+        background-color: var(--stats-background);
+        border-radius: 4px;
+        text-align: center;
+        width: 380px;
+    }
+</style>
+
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-content">
+            <div class="numbers-container" id="numbers"></div>
+            
+            <div class="input-container">
+                <div id="help-text">
+                    Use +, -, *, /, ^ (exponent), ! (factorial), % (modulus), and ()
+                </div>
+            </div>            
+			<div class="input-container">
+                <input type="text" id="equation" placeholder="Enter your equation...">
+                <button onclick="checkEquation()">Check</button>
+            </div>
+            
+            <div id="message"></div>
+
+            <div class="stats">
+                Solved: <span id="solved-count">0</span>/20
+            </div>
+        </div>
+
+        <div class="progress-grid" id="progress"></div>
+    </div>
+
+<script>
+        let numbers = [];
+        let solved = new Set();
+
+		function generateNumbers() {
+			const availableNumbers = Array.from({length: 9}, (_, i) => i + 1);
+
+			for (let i = availableNumbers.length - 1; i > 0; i--) {
+				const j = Math.floor(Math.random() * (i + 1));
+				[availableNumbers[i], availableNumbers[j]] = [availableNumbers[j], availableNumbers[i]];
+			}
+			
+			numbers = availableNumbers.slice(0, 4).sort((a, b) => a - b); 
+			solved = new Set();
+			updateDisplay();
+		}
+
+		function factorial(n) {
+			if (n < 0) return null;
+			if (n <= 1) return 1;
+			let result = 1;
+			for (let i = 2; i <= n; i++) {
+				result *= i;
+			}
+			return result;
+		}
+
+function evaluateExpression(expr) {
+    const factorialMatches = expr.match(/(\d+)!/g) || [];
+    const factorialNums = factorialMatches.map(match => parseInt(match.replace('!', '')));
+
+    const factorialExpr = expr.replace(/(\d+)!/g, (match, num) => {
+        const fact = factorial(parseInt(num));
+        return fact !== null ? fact.toString() : match;
+    });
+
+    const finalExpr = factorialExpr.replace(/\^/g, '**');
+
+    try {
+        const numberMatches = expr.match(/\d+/g);
+        if (!numberMatches) return null;
+        
+        const extractedNums = [...new Set(numberMatches.map(Number))];
+        const originalNumSet = new Set(numbers);
+        
+        if (extractedNums.length !== numbers.length) return null;
+        
+        const isValid = extractedNums.every(num => originalNumSet.has(num));
+        
+        if (!isValid) return null;
+
+        const result = Math.round(eval(finalExpr) * 1000) / 1000;
+        return result;
+    } catch (e) {
+        return null;
+    }
+}
+
+        function checkEquation() {
+            const equation = document.getElementById('equation').value;
+            const result = evaluateExpression(equation);
+            
+            if (result === null) {
+                showMessage('Invalid equation or not using all numbers exactly once', 'error');
+                return;
+            }
+
+            const wholeResult = Math.round(result);
+            if (wholeResult !== result || wholeResult < 1 || wholeResult > 20) {
+                showMessage(`Equation equals ${result}, which isn't a whole number between 1 and 20`, 'error');
+                return;
+            }
+
+            if (solved.has(wholeResult)) {
+                showMessage(`You've already solved for ${wholeResult}! Try a different number.`, 'error');
+                return;
+            }
+
+            solved.add(wholeResult);
+            document.getElementById('equation').value = '';
+            showMessage(`Great! Your equation equals ${wholeResult}`, 'success');
+            updateDisplay();
+            document.getElementById('solved-count').textContent = solved.size;
+            
+            if (solved.size === 20) {
+                showMessage('Congratulations! You solved all numbers!', 'success');
+            }
+        }
+
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.className = 'message ' + type;
+        }
+
+        function updateDisplay() {
+            const numbersContainer = document.getElementById('numbers');
+            numbersContainer.innerHTML = numbers.map(n => 
+                `<div class="number-box">${n}</div>`
+            ).join('');
+
+            // Update progress grid
+            const progressContainer = document.getElementById('progress');
+            progressContainer.innerHTML = Array.from({length: 20}, (_, i) => {
+                const number = i + 1;
+                return `<div class="number-cell ${solved.has(number) ? 'solved' : ''}">${number}</div>`;
+            }).join('');
+        }
+
+        generateNumbers();
+
+        document.getElementById('equation').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                checkEquation();
+            }
+        });
+    </script>
+</body>
+</html>
