@@ -42,11 +42,13 @@
         display: flex;
         flex-direction: column;
         align-items: center;
+        min-height: 400px; /* Added to maintain consistent height */
     }
     .numbers-container {
         display: flex;
         gap: 10px;
         margin-bottom: 20px;
+        min-height: 50px; /* Added to maintain consistent height */
     }
     .number-box {
         width: 50px;
@@ -58,11 +60,16 @@
         justify-content: center;
         font-size: 24px;
         font-weight: bold;
+        transition: opacity 0.2s ease;
+    }
+    .number-box.inactive {
+        opacity: 0.4;
     }
     .input-container {
         margin-bottom: 20px;
         display: flex;
         align-items: center;
+        width: 100%; /* Added for consistent width */
     }
     input[type="text"] {
         padding: 8px;
@@ -81,6 +88,10 @@
     }
     button:hover {
         background-color: var(--primary-hover-color);
+    }
+    button:disabled {
+        background-color: var(--neutral-background);
+        cursor: not-allowed;
     }
     .progress-grid {
         display: grid;
@@ -102,7 +113,8 @@
         background-color: var(--success-background);
         color: white;
     }
-    .message {
+    #message {
+        min-height: 20px; /* Added to maintain consistent height */
         margin: 10px 0;
         padding: 10px;
         border-radius: 4px;
@@ -119,6 +131,7 @@
         font-size: 14px;
         color: var(--help-text-color);
         margin-bottom: 10px;
+        min-height: 20px; /* Added to maintain consistent height */
     }
     .stats {
         margin-top: 20px;
@@ -128,12 +141,22 @@
         text-align: center;
         width: 380px;
     }
+	#start-container {
+        z-index: 1;
+        padding: 10px;
+	}
+    #timer {
+        font-size: 18px;
+        font-weight: bold;
+        padding: 10px;
+        color: var(--help-text-color);
+    }
 </style>
 
 </head>
 <body>
     <div class="game-container">
-        <div class="game-content">
+        <div class="game-content">          
             <div class="numbers-container" id="numbers"></div>
             
             <div class="input-container">
@@ -141,15 +164,20 @@
                     Use +, -, *, /, ^ (exponent), ! (factorial), % (modulus), and ()
                 </div>
             </div>            
-			<div class="input-container">
-                <input type="text" id="equation" placeholder="Enter your equation...">
-                <button onclick="checkEquation()">Check</button>
+            <div class="input-container">
+                <input type="text" id="equation" placeholder="Enter your equation..." disabled>
+                <button onclick="checkEquation()" id="check-button" disabled>Check</button>
             </div>
             
             <div id="message"></div>
 
             <div class="stats">
                 Solved: <span id="solved-count">0</span>/20
+            </div>
+            
+            <div id="timer">Time: 0:00</div>
+			            <div id="start-container">
+                <button id="start-button" onclick="startGame()">Start Game</button>
             </div>
         </div>
 
@@ -159,62 +187,100 @@
 <script>
         let numbers = [];
         let solved = new Set();
+        let startTime;
+        let timerInterval;
+        let gameActive = false;
 
-		function generateNumbers() {
-			const availableNumbers = Array.from({length: 9}, (_, i) => i + 1);
+        function startGame() {
+            gameActive = true;
+            document.getElementById('start-button').style.display = 'none';
+            document.getElementById('equation').disabled = false;
+            document.getElementById('check-button').disabled = false;
+            
+            // Reset game state
+            numbers = [];
+            solved = new Set();
+            document.getElementById('solved-count').textContent = '0';
+            
+            // Generate new numbers
+            generateNumbers();
+            
+            // Start timer
+            startTime = new Date();
+            timerInterval = setInterval(updateTimer, 1000);
+            
+            // Clear any existing messages
+            showMessage('', '');
+        }
 
-			for (let i = availableNumbers.length - 1; i > 0; i--) {
-				const j = Math.floor(Math.random() * (i + 1));
-				[availableNumbers[i], availableNumbers[j]] = [availableNumbers[j], availableNumbers[i]];
-			}
-			
-			numbers = availableNumbers.slice(0, 4).sort((a, b) => a - b); 
-			solved = new Set();
-			updateDisplay();
-		}
+        function updateTimer() {
+            if (!gameActive) return;
+            
+            const now = new Date();
+            const timeDiff = Math.floor((now - startTime) / 1000); // seconds
+            const minutes = Math.floor(timeDiff / 60);
+            const seconds = timeDiff % 60;
+            
+            document.getElementById('timer').textContent = 
+                `Time: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
 
-		function factorial(n) {
-			if (n < 0) return null;
-			if (n <= 1) return 1;
-			let result = 1;
-			for (let i = 2; i <= n; i++) {
-				result *= i;
-			}
-			return result;
-		}
+        function generateNumbers() {
+            const availableNumbers = Array.from({length: 9}, (_, i) => i + 1);
 
-function evaluateExpression(expr) {
-    const factorialMatches = expr.match(/(\d+)!/g) || [];
-    const factorialNums = factorialMatches.map(match => parseInt(match.replace('!', '')));
+            for (let i = availableNumbers.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [availableNumbers[i], availableNumbers[j]] = [availableNumbers[j], availableNumbers[i]];
+            }
+            
+            numbers = availableNumbers.slice(0, 4).sort((a, b) => a - b); 
+            updateDisplay();
+        }
 
-    const factorialExpr = expr.replace(/(\d+)!/g, (match, num) => {
-        const fact = factorial(parseInt(num));
-        return fact !== null ? fact.toString() : match;
-    });
+        function factorial(n) {
+            if (n < 0) return null;
+            if (n <= 1) return 1;
+            let result = 1;
+            for (let i = 2; i <= n; i++) {
+                result *= i;
+            }
+            return result;
+        }
 
-    const finalExpr = factorialExpr.replace(/\^/g, '**');
+        function evaluateExpression(expr) {
+            const factorialMatches = expr.match(/(\d+)!/g) || [];
+            const factorialNums = factorialMatches.map(match => parseInt(match.replace('!', '')));
 
-    try {
-        const numberMatches = expr.match(/\d+/g);
-        if (!numberMatches) return null;
-        
-        const extractedNums = [...new Set(numberMatches.map(Number))];
-        const originalNumSet = new Set(numbers);
-        
-        if (extractedNums.length !== numbers.length) return null;
-        
-        const isValid = extractedNums.every(num => originalNumSet.has(num));
-        
-        if (!isValid) return null;
+            const factorialExpr = expr.replace(/(\d+)!/g, (match, num) => {
+                const fact = factorial(parseInt(num));
+                return fact !== null ? fact.toString() : match;
+            });
 
-        const result = Math.round(eval(finalExpr) * 1000) / 1000;
-        return result;
-    } catch (e) {
-        return null;
-    }
-}
+            const finalExpr = factorialExpr.replace(/\^/g, '**');
+
+            try {
+                const numberMatches = expr.match(/\d+/g);
+                if (!numberMatches) return null;
+                
+                const extractedNums = [...new Set(numberMatches.map(Number))];
+                const originalNumSet = new Set(numbers);
+                
+                if (extractedNums.length !== numbers.length) return null;
+                
+                const isValid = extractedNums.every(num => originalNumSet.has(num));
+                
+                if (!isValid) return null;
+
+                const result = Math.round(eval(finalExpr) * 1000) / 1000;
+                return result;
+            } catch (e) {
+                return null;
+            }
+        }
 
         function checkEquation() {
+            if (!gameActive) return;
+            
             const equation = document.getElementById('equation').value;
             const result = evaluateExpression(equation);
             
@@ -241,8 +307,19 @@ function evaluateExpression(expr) {
             document.getElementById('solved-count').textContent = solved.size;
             
             if (solved.size === 20) {
-                showMessage('Congratulations! You solved all numbers!', 'success');
+                const finalTime = document.getElementById('timer').textContent;
+                showMessage(`Congratulations! You solved all numbers! Final time: ${finalTime}`, 'success');
+                endGame();
             }
+        }
+
+        function endGame() {
+            gameActive = false;
+            clearInterval(timerInterval);
+            document.getElementById('equation').disabled = true;
+            document.getElementById('check-button').disabled = true;
+            document.getElementById('start-button').style.display = 'block';
+            document.getElementById('start-button').textContent = 'Play Again';
         }
 
         function showMessage(text, type) {
@@ -251,20 +328,24 @@ function evaluateExpression(expr) {
             messageDiv.className = 'message ' + type;
         }
 
-        function updateDisplay() {
-            const numbersContainer = document.getElementById('numbers');
-            numbersContainer.innerHTML = numbers.map(n => 
-                `<div class="number-box">${n}</div>`
-            ).join('');
+    function updateDisplay() {
+        const numbersContainer = document.getElementById('numbers');
+        numbersContainer.innerHTML = Array(4).fill(`<div class="number-box">${gameActive ? numbers[0] : ''}</div>`).map((box, i) => 
+            gameActive ? `<div class="number-box">${numbers[i]}</div>` : box
+        ).join('');
 
-            // Update progress grid
-            const progressContainer = document.getElementById('progress');
-            progressContainer.innerHTML = Array.from({length: 20}, (_, i) => {
-                const number = i + 1;
-                return `<div class="number-cell ${solved.has(number) ? 'solved' : ''}">${number}</div>`;
-            }).join('');
-        }
+        // Update progress grid
+        const progressContainer = document.getElementById('progress');
+        progressContainer.innerHTML = Array.from({length: 20}, (_, i) => {
+            const number = i + 1;
+            return `<div class="number-cell ${solved.has(number) ? 'solved' : ''}">${number}</div>`;
+        }).join('');
+    }
 
+    // Initialize empty display (removed generateNumbers call)
+    updateDisplay();
+
+        // Initialize empty progress grid
         generateNumbers();
 
         document.getElementById('equation').addEventListener('keypress', function(e) {
@@ -272,6 +353,6 @@ function evaluateExpression(expr) {
                 checkEquation();
             }
         });
-    </script>
+</script>
 </body>
 </html>
