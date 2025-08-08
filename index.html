@@ -34,7 +34,7 @@
         border-radius: 8px;
         box-shadow: 0 2px 4px var(--box-shadow-color);
         display: flex;
-        max-width: 800px;
+        max-width: 400px;
         width: 100%;
         gap: 20px;
     }
@@ -70,7 +70,7 @@
         margin-bottom: 20px;
         display: flex;
         align-items: center;
-        width: 100%; /* Added for consistent width */
+        width: 100%;
     }
     input[type="text"] {
         padding: 8px;
@@ -99,7 +99,8 @@
         grid-template-columns: repeat(10, 1fr);
         grid-template-rows: repeat(10, 1fr);
         gap: 8px;
-        width: 380px;
+        width: 100%;
+		height: 80px;
     }
     .number-cell {
         aspect-ratio: 1;
@@ -172,6 +173,7 @@
             
             <div id="message"></div>
 
+			<div class="progress-grid" id="progress"></div>
             <div class="stats">
                 Solved: <span id="solved-count">0</span>/20
             </div>
@@ -182,7 +184,7 @@
             </div>
         </div>
 
-        <div class="progress-grid" id="progress"></div>
+       
     </div>
 
 <script>
@@ -286,30 +288,30 @@
             const result = evaluateExpression(equation);
             
             if (result === null) {
-                showMessage('Invalid equation or not using all numbers exactly once', 'error');
+                showMessage('Invalid equation', 'error');
                 return;
             }
 
             const wholeResult = Math.round(result);
             if (wholeResult !== result || wholeResult < 1 || wholeResult > 20) {
-                showMessage(`Equation equals ${result}, which isn't a whole number between 1 and 20`, 'error');
+                showMessage(`Equals ${result}`, 'error');
                 return;
             }
 
             if (solved.has(wholeResult)) {
-                showMessage(`You've already solved for ${wholeResult}! Try a different number.`, 'error');
+                showMessage(`Already solved for ${wholeResult}!`, 'error');
                 return;
             }
 
             solved.add(wholeResult);
             document.getElementById('equation').value = '';
-            showMessage(`Great! Your equation equals ${wholeResult}`, 'success');
+            showMessage(`${wholeResult}`, 'success');
             updateDisplay();
             document.getElementById('solved-count').textContent = solved.size;
             
             if (solved.size === 20) {
                 const finalTime = document.getElementById('timer').textContent;
-                showMessage(`Congratulations! You solved all numbers! Final time: ${finalTime}`, 'success');
+                showMessage(`Congratulations! Final ${finalTime}`, 'success');
                 endGame();
             }
         }
